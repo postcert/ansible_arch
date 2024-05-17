@@ -1,0 +1,10 @@
+* Ansible Arch Scripts
+Always had some Ansible around to handle a few quirks and things (nvidia-suspend, bluetooth headphones, base utilities, etc)
+After giving NixOS a run for a bit I decided to try out a middle-ground for a bit where I attempt to keep all package and config changes in Ansible.
+
+** Choices
+*** zfs-dkms
+I chose to use dkms for zfs (only used for large data drives on this machine) due to the arch kernel release cadences. I'd rather lose zfs after an update than lose the nvidia driver but that's rare as I mostly use the lts kernel.
+
+** Usage
+Don't really expect anyone else to but `make requirements` and `make playbook TAG=$some_tag`

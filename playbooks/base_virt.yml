@@ -1,0 +1,81 @@
+---
+- hosts: all
+  become: true
+  tasks:
+
+  # Virt Manager
+  - name: Install necessary packages
+    pacman:
+      name:
+        - virt-manager
+        - qemu-desktop
+        - libvirt
+      state: present
+    become: true
+
+  - name: Ensure libvirt service is enabled and running
+    systemd:
+      name: libvirtd
+      enabled: yes
+      state: started
+    become: true
+
+  - name: Add current user to libvirt group
+    user:
+      name: "{{ ansible_user }}"
+      groups: libvirt
+      append: yes
+    become: true
+
+  - name: Add current user to kvm group
+    user:
+      name: "{{ ansible_user }}"
+      groups: kvm
+      append: yes
+    become: true
+
+  # Podman
+  - name: Install necessary packages
+    pacman:
+      name:
+        - podman
+        - btrfs-progs
+        - cni-plugins
+        - fuse-overlayfs
+        - podman-compose
+        - podman-docker
+
+  - name: Ensure the unqualified search registries are set
+    lineinfile:
+      path: /etc/containers/registries.conf.d/10-unqualified-search-registries.conf
+      create: yes
+      line: 'unqualified-search-registries = ["docker.io"]'
+      state: present
+
+  - name: Ensure subuid entry for user
+    lineinfile:
+      path: /etc/subuid
+      line: "{{ ansible_user }}:100000:65536"
+      state: present
+      create: yes
+
+  - name: Ensure subgid entry for user
+    lineinfile:
+      path: /etc/subgid
+      line: "{{ ansible_user }}:100000:65536"
+      state: present
+      create: yes
+
+  - name: Quiet podman cli when running "docker"
+    ansible.builtin.file:
+      path: /etc/containers/nodocker
+      state: touch
+      owner: root
+      group: root
+      mode: '0644'
+
+  # Distrobox
+  - name: Install necessary packages
+    pacman:
+      name:
+        - distrobox

@@ -1,0 +1,19 @@
+---
+- hosts: all
+  become: true
+  tasks:
+
+  - name: Add Arch ZFS keys
+    ansible.builtin.command:
+      cmd: "{{ item }}"
+    with_items:
+      - pacman-key -r ddf7db817396a49b2a2723f7403bd972f75d9d76
+      - pacman-key --lsign-key DDF7DB817396A49B2A2723F7403BD972F75D9D76
+
+  - name: Install zfs-dkms from aur
+    kewlfft.aur.aur:
+      name:
+        - zfs-dkms
+      state: present
+    become: yes
+    become_user: aur_builder

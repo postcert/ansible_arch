@@ -1,0 +1,100 @@
+---
+- hosts: all
+  become: true
+  tasks:
+
+  # Nvidia
+  # Resume Config
+  - name: Configure NVIDIA kernel module to preserve video memory on suspend
+    copy:
+      dest: /etc/modprobe.d/nvidia.conf
+      content: |
+        options nvidia NVreg_PreserveVideoMemoryAllocations=1 NVreg_TemporaryFilePath=/var/tmp
+      owner: root
+      group: root
+      mode: '0644'
+
+  # fbdev
+
+  # - name: Add nvidia_drm.fbdev=1 to GRUB if nvidia-drm.modeset=1 is present
+  #   lineinfile:
+  #     path: /etc/default/grub
+  #     regexp: '^GRUB_CMDLINE_LINUX_DEFAULT="(.*)nvidia-drm.modeset=1([^"]*)"$'
+  #     line: 'GRUB_CMDLINE_LINUX_DEFAULT="\1nvidia-drm.modeset=1\2 nvidia_drm.fbdev=1"'
+  #     backrefs: yes
+  #   when: "'nvidia_drm.fbdev=1' not in grub_content.content"
+  #   register: grub_updated
+  #   check_mode: no
+
+  # - name: Read GRUB config file
+  #   slurp:
+  #     src: /etc/default/grub
+  #   register: grub_content
+
+  # - name: Update GRUB configuration
+  #   command: grub-mkconfig -o /boot/grub/grub.cfg
+  #   when: grub_updated.changed
+
+  # Soundcore Headphones
+  - name: Headphone bluez config
+    ansible.builtin.lineinfile:
+      dest: /usr/share/spa-0.2/bluez5/bluez-hardware.conf
+      line: '    { name = "Soundcore Space Q45", no-features = [ hw-volume ] },'
+      insertafter: 'bluez5.features.device = \['
+      backup: yes
+    become: yes 
+  
+  # Mounts
+  - name: make secondary directory
+    ansible.builtin.file:
+      path: /mnt/secondary
+      state: directory
+      group: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+      mode: '0755'
+    become: yes
+
+  - name: secondary
+    ansible.builtin.mount:
+      path: /mnt/secondary
+      src: UUID=81bf9ef2-f5c9-44b8-9601-496799dddbbe
+      fstype: btrfs
+      opts: defaults,noatime
+      state: present
+    become: yes
+
+  - name: make sam850_1t directory
+    ansible.builtin.file:
+      path: /mnt/sam850_1t
+      state: directory
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+      mode: '0755'
+    become: yes
+
+  - name: sam850_1t
+    ansible.builtin.mount:
+      path: /mnt/sam850_1t
+      src: UUID=12d39ebd-6012-4aac-a1bc-5783a74c2080
+      fstype: ext4
+      opts: defaults,noatime
+      state: present
+    become: yes
+
+  - name: make little_intel directory
+    ansible.builtin.file:
+      path: /mnt/little_intel
+      state: directory
+      group: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+      mode: '0755'
+    become: yes
+
+  - name: little_intel
+    ansible.builtin.mount:
+      path: /mnt/little_intel
+      src: UUID=423ffd56-8b48-47d1-a5cc-977cace87ce5
+      fstype: ext4
+      opts: defaults,noatime
+      state: present
+    become: yes

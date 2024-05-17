@@ -1,0 +1,27 @@
+---
+- hosts: all
+  tags: always
+
+# Base System Stuff
+- import_playbook: playbooks/base_system.yml
+  tags: base_system
+- import_playbook: playbooks/base_virt.yml
+  tags: base_virt
+- import_playbook: playbooks/base_hardware.yml
+  tags: base_hardware
+- import_playbook: playbooks/base_timeshift.yml
+  tags: base_timeshift
+- import_playbook: playbooks/base_wayland.yml
+  tags: base_wayland
+- import_playbook: playbooks/base_zfs.yml
+  tags: base_zfs
+- import_playbook: playbooks/nvidia_resume_monitor_hz.yml
+  tags: nvidia_resume
+
+# Applications and Usability
+- import_playbook: playbooks/app.yml
+  tags: app
+- import_playbook: playbooks/dev.yml
+  tags: dev
+- import_playbook: playbooks/game.yml
+  tags: game

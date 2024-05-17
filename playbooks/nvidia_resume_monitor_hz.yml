@@ -1,0 +1,49 @@
+# Nvidia drivers fail to resume 4k@120hz hdmi2.1 display
+---
+- name: Systemd hooks to set monitor hz before/after sleep
+  hosts: localhost
+  tasks:
+    - name: Create systemd directory
+      file:
+        path: "{{ lookup('env', 'HOME') }}/.config/systemd/user"
+        state: directory
+        mode: '0755'
+
+    - name: Create script directory
+      file:
+        path: "{{ lookup('env', 'HOME') }}/bin"
+        state: directory
+        mode: '0755'
+
+    - name: Create pre-sleep service unit file
+      template:
+        src: ./templates/monitor-pre-sleep.service.j2
+        dest: "{{ lookup('env', 'HOME') }}/.config/systemd/user/monitor-pre-sleep.service"
+        mode: '0644'
+
+    - name: Create post-resume service unit file
+      template:
+        src: ./templates/monitor-post-resume.service.j2
+        dest: "{{ lookup('env', 'HOME') }}/.config/systemd/user/monitor-post-resume.service"
+        mode: '0644'
+
+    - name: Create pre-sleep script
+      template:
+        src: ./templates/monitor-pre-sleep-script.sh.j2
+        dest: "{{ lookup('env', 'HOME') }}/bin/monitor-pre-sleep-script.sh"
+        mode: '0755'
+
+    - name: Create post-resume script
+      template:
+        src: ./templates/monitor-post-resume-script.sh.j2
+        dest: "{{ lookup('env', 'HOME') }}/bin/monitor-post-resume-script.sh"
+        mode: '0755'
+
+    - name: Reload systemd user daemon
+      command: systemctl --user daemon-reload
+
+    - name: Enable pre-sleep service
+      command: systemctl --user enable monitor-pre-sleep.service
+
+    - name: Enable post-resume service
+      command: systemctl --user enable monitor-post-resume.service

@@ -1,0 +1,67 @@
+---
+- hosts: all
+  become: true
+  tasks:
+
+  - name: Install AUR applications
+    kewlfft.aur.aur:
+      name:
+        - spotify
+        - maestral-qt
+        - vesktop
+      state: present
+    become: yes
+    become_user: aur_builder
+
+  - name: Install repo applications
+    pacman:
+      name:
+        - telegram-desktop
+        - thunderbird
+        - gimp
+        - gimp-plugin-gmic
+        - libreoffice-fresh
+        - bitwarden
+        - qbittorrent
+        - partitionmanager
+
+  # Flameshot
+  - name: install flameshot
+    pacman:
+      name:
+        - flameshot
+        # Wayland
+        - xdg-desktop-portal
+        - xdg-desktop-portal-wlr
+        - grim
+
+  # Flameshot - Wayland - https://github.com/flameshot-org/flameshot/blob/master/docs/Sway%20and%20wlroots%20support.md
+  # The env-vars and systemd config are set elsewhere in dotfiles
+  # Require manual poking for KDE Wayland as well: https://github.com/flameshot-org/flameshot/issues/3073#issuecomment-1740187784
+  # TODO: Possibly move this config file to dotfiles as well
+  - name: Gather the user facts
+    ansible.builtin.getent:
+      database: passwd
+      key: "{{ ansible_user | default(lookup('env','USER')) }}"
+
+  - name: Ensure .config/xdg-desktop-portal directory exists
+    ansible.builtin.file:
+      path: "{{ getent_passwd[ansible_user | default(lookup('env','USER'))][4] }}/.config/xdg-desktop-portal"
+      state: directory
+      owner: "{{ ansible_user | default(lookup('env','USER')) }}"
+      group: "{{ ansible_user | default(lookup('env','USER')) }}"
+      mode: '0755'
+
+  - name: Create sway-portals.conf file
+    ansible.builtin.copy:
+      dest: "{{ getent_passwd[ansible_user | default(lookup('env','USER'))][4] }}/.config/xdg-desktop-portal/sway-portals.conf"
+      owner: "{{ ansible_user | default(lookup('env','USER')) }}"
+      group: "{{ ansible_user | default(lookup('env','USER')) }}"
+      mode: '0644'
+      content: |
+        [preferred]
+        # use xdg-desktop-portal-gtk for every portal interface
+        default=gtk
+        # except for the xdg-desktop-portal-wlr supplied interfaces
+        org.freedesktop.impl.portal.Screencast=wlr
+        org.freedesktop.impl.portal.Screenshot=wlr

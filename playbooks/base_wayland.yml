@@ -1,0 +1,93 @@
+# Not really "only" Wayland
+# Covers packages coming from an EndeavourOS KDE base
+# Sources:
+# EndeavourOs' outdated sway install script: https://github.com/EndeavourOS-Community-Editions/sway/blob/main/packages-repository.txt
+# Madic-'s Sway-DE repo: https://github.com/Madic-/Sway-DE/blob/master/setup-02-de.yml - Polluted with non-sway packages
+# Sway wiki i3 migration: https://github.com/swaywm/sway/wiki/i3-Migration-Guide
+
+# Also the favorite: https://arewewaylandyet.com/
+---
+- hosts: all
+  become: true
+  tasks:
+    - name: Install Sway and Wayland packages
+      community.general.pacman:
+        name:
+          # Sway
+          - sway                           # A tiling Wayland compositor and a drop-in replacement for the i3 window manager for X11
+          - sway-contrib                   # A collection of tools for sway
+          - swaybg                         # A wallpaper utility for Wayland compositors
+          - swayidle                       # An idle management daemon for Wayland
+          - swaylock                       # A screen locker for Wayland
+          # Wayland
+          - xdg-desktop-portal-wlr         # xdg-desktop-portal
+          - wayland-protocols              # Wayland protocols
+          - qt5-wayland                    # Qt5 module for supporting the Wayland protocol
+          - qt6-wayland                    # Qt6 module for supporting the Wayland protocol
+          - egl-wayland                    # EGLStream-based Wayland platform
+          - gtk-layer-shell                # GTK+ 4 support for layer shell
+          # xorg
+          - xorg-xwayland                  # Run X clients under Wayland
+          # DE - lower level
+          - sddm                           # Simple Desktop Display Manager - already installed on eOS but might as well call out
+          - udiskie                        # An automounter for removable media
+          - polkit-gnome                   # GNOME authentication agent for PolicyKit
+          - brightnessctl                  # A tool to control monitor brightness
+          - network-manager-applet         # Applet for NetworkManager
+          # DE - file manager
+          - thunar
+          - thunar-volman                 # Thunar volume manager
+          - thunar-archive-plugin         # Thunar archive plugin
+          - file-roller                   # Archive manager
+          # DE - tools / helpers
+          - wf-recorder                    # A utility to record screen in Wayland compositors
+          - wl-clipboard                   # Command-line copy/paste utilities for Wayland
+          - nwg-look                       # A GTK-based look and feel customization tool for Sway
+          - waybar                         # A highly customizable Wayland bar for Sway and Wlroots based compositors
+          - grim                           # Screenshot utility for Wayland
+          - slurp                          # A tool to select a region in a Wayland compositor
+          - swappy                         # A Wayland native snapshot and editor tool, inspired by Snappy on macOS
+          - mako                           # A lightweight notification daemon for Wayland
+          - wofi                           # A launcher for wlroots-based compositors
+          - gammastep                      # A screen color temperature adjustment tool
+
+    - name: Copy sway-nvidia.desktop to /usr/share/wayland-sessions
+      copy:
+        src: ./templates/sway-nvidia.desktop
+        dest: /usr/share/wayland-sessions/sway-nvidia.desktop
+        owner: root
+        group: root
+        mode: '0644'
+      become: yes
+    
+    - name: Inject env-vars into /etc/profile
+      ansible.builtin.blockinfile:
+        dest: /etc/profile
+        block: |
+          # Wayland specific config
+          if [ "$XDG_SESSION_TYPE" = "wayland" ]; then
+              #export QT_QPA_PLATFORMTHEME=qt5ct
+
+              # Wayland
+              export MOZ_ENABLE_WAYLAND=1
+              export XDG_CURRENT_DESKTOP=sway
+              export XDG_SESSION_TYPE=wayland
+              export WLR_NO_HARDWARE_CURSORS=1
+              #export WLR_NO_HARDWARE_CURSORS=0
+              export WLR_RENDERER_ALLOW_SOFTWARE=1
+
+              # More
+              export WLR_RENDERER=vulkan
+              export SDL_VIDEODRIVER=wayland
+              export _JAVA_AWT_WM_NONREPARENTING=1
+              export XDG_SESSION_DESKTOP=sway
+              export GDK_BACKEND=wayland
+              #export XWAYLAND_NO_GLAMOR=1
+              export QT_QPA_PLATFORMTHEME=qt5ct
+
+              export GBM_BACKEND=nvidia-drm
+              export __GLX_VENDOR_LIBRARY_NAME=nvidia
+          fi
+      become: yes
+
+  

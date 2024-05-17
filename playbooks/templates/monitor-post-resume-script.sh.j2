@@ -1,0 +1,11 @@
+#!/bin/bash
+# Script to set screens to maximum hertz after resume
+
+# X11 check
+if [ "$XDG_SESSION_TYPE" == "x11" ]; then
+    /bin/sleep 1 # Would prefer ExecStartPre but it would delay Wayland sleep
+
+    xrandr --output HDMI-0 --primary --mode 3840x2160 --rate 120
+    xrandr --output DP-0 --mode 2560x1440 --rate 60
+    xrandr --output DP-2 --mode 2560x1440 --rate 170
+fi

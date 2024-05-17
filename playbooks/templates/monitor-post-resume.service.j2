@@ -1,0 +1,10 @@
+[Unit]
+Description=Run script after system resumes
+After=suspend.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/{{ ansible_user }}/bin/monitor-post-resume-script.sh
+
+[Install]
+WantedBy=suspend.target

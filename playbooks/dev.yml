@@ -1,0 +1,35 @@
+---
+- hosts: all
+  become: true
+  tasks:
+
+  # Fonts
+  - name: Install fonts
+    pacman:
+      name:
+        - ttf-hack-nerd   # Plasma reqs ttf-hack but need nerd-font additions
+        - ttf-sourcecodepro-nerd
+        - ttf-dejavu-nerd
+
+  # deps
+  - name: Install dev deps
+    pacman:
+      name:
+        - chezmoi         # dotfile manager
+        - ripgrep         # search tool
+        - fd              # search tool
+        - tmux            # terminal multiplexer
+
+  # Emacs
+  - name: Install emacs
+    pacman:
+      name:
+        # - emacs-wayland   # emacs
+        - emacs
+
+  # Neovim
+  - name: Install neovim
+    pacman:
+      name:
+        - neovim          # neovim
+        - neovide         # neovim gui

@@ -1,0 +1,10 @@
+[Unit]
+Description=Run script before system sleeps
+Before=sleep.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/{{ ansible_user }}/bin/monitor-pre-sleep-script.sh
+
+[Install]
+WantedBy=sleep.target

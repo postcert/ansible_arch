@@ -1,0 +1,4 @@
+* Configuration for postbox (desktop)
+** Things missed
+*** etckeeper
+Installed manually prior to starting on these playbooks to ensure I had some level of backup

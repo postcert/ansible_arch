@@ -1,0 +1,61 @@
+# Source: https://discovery.endeavouros.com/encrypted-installation/btrfs-with-timeshift-snapshots-on-the-grub-menu/2022/02/
+# 
+---
+- hosts: all
+  become: true
+  tasks:
+
+  - name: Install timeshift, autosnap, and grub-btrfs
+    kewlfft.aur.aur:
+      name:
+        - timeshift
+        - timeshift-autosnap
+        - grub-btrfs
+      state: present
+    become: yes
+    become_user: aur_builder
+
+  - name: Enable and start cronie
+    systemd:
+      name: cronie
+      enabled: yes
+      state: started
+
+  - name: Create drop-in directory for grub-btrfsd service
+    ansible.builtin.file:
+      path: /etc/systemd/system/grub-btrfsd.service.d
+      state: directory
+      mode: '0755'
+
+  - name: Add custom ExecStart to grub-btrfsd service
+    ansible.builtin.copy:
+      dest: /etc/systemd/system/grub-btrfsd.service.d/override.conf
+      content: |
+        [Service]
+        ExecStart=
+        ExecStart=/usr/bin/grub-btrfsd --syslog --timeshift-auto
+      mode: '0644'
+    notify:
+      - reload systemctl daemon
+      - restart and enable grub-btrfsd service
+  
+  - name: Rebuild the grub configuration file
+    ansible.builtin.command:
+      cmd: grub-mkconfig -o /boot/grub/grub.cfg
+
+  - name: Log manual steps
+    debug:
+      msg: "MANUAL INTERVENTION NEEDED: Run the Timeshift GUI to configure the root and snapshot configuration!"
+
+
+  handlers:
+    - name: reload systemctl daemon
+      ansible.builtin.systemd:
+        daemon_reload: yes
+
+    - name: restart and enable grub-btrfsd service
+      ansible.builtin.systemd:
+        name: grub-btrfsd
+        state: restarted
+        enabled: yes
+    

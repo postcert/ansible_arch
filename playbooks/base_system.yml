@@ -1,0 +1,289 @@
+---
+- hosts: all
+  become: true
+  tasks:
+
+  # Update Cache, skipping upgrade
+  - name: update arch
+    pacman:
+      update_cache: yes
+
+  - name: Useful utilities
+    pacman:
+      update_cache: yes
+      name:
+        - git                     # to clone github repos
+        - curl                    # download utility
+        - wget                    # download utility
+        - rsync                   # copy utility
+        - fd                      # simpler find
+        - fzf                     # fuzzy filter, useful for file search
+        - bat                     # prettier cat
+        - tree                    # show files/directories structure
+        - unarchiver              # extract any archive
+        - fastfetch               # system info
+        - duf                     # prettier df
+        - ncdu                    # investigate disk usage
+        - htop                    # resource monitor
+        - btop                    # better resource monitor
+        - glances                 # system monitor
+        - iotop                   # disk use monitor
+        - nethogs                 # network monitor per process
+        - nmap                    # network scan
+        - gnu-netcat              # diagnose network issues using tiny server
+        - tcpdump                 # diagnose network issues by wathing ports
+        - net-tools               # network utilities like arp, netstat
+        - iproute2                # network utilities like ss
+        - bind                    # DNS utilities, like nslookup
+        - nload                   # monitor bandwidth
+        - sysfsutils              # utility to deal with sysfs
+        - lsof                    # list open files
+        - fuse                    # mounting file systems
+        - sqlite                  # simple database and utilities for it
+        - sysstat                 # system statistics
+        - pkgfile                 # A tool to find which package owns a file
+        - playerctl               # A command-line utility for controlling media playback
+        - python-pywal            # A tool that generates a color palette from the dominant colors in an image
+        - exa                     # A modern replacement for ls
+        - highlight               # A universal source code to formatted text converter
+        - imagemagick             # A software suite to create, edit, compose, or convert bitmap images
+        - inetutils               # A collection of common network programs
+        - autoconf                # A tool for generating configure scripts for building, installing, and packaging software
+        - automake                # A tool for automatically generating Makefile.in files compliant with the GNU Coding Standards
+        - ffmpeg                  # A complete, cross-platform solution to record, convert and stream audio and video
+        - jq                      # A lightweight and flexible command-line JSON processor
+        - arandr                  # A simple visual front end for XRandR
+        - linux-lts               # The LTS Linux kernel and modules
+        - bluez                   # Bluetooth
+        - bluez-utils             # Bluetooth utils
+        - tailscale               # Tailscale client
+
+  # SYSTEM SETTINGS CHANGES
+
+  - name: pacman - enable color
+    lineinfile:
+      path: /etc/pacman.conf
+      regexp: '^#Color$'
+      line: 'Color'
+
+  - name: pacman - enable ParallelDownloads = 5
+    lineinfile:
+      path: /etc/pacman.conf
+      regexp: '#ParallelDownloads = 5'
+      line: 'ParallelDownloads = 5'
+
+  - name: makepkg - disable compression
+    lineinfile:
+      path: /etc/makepkg.conf
+      regexp: "PKGEXT='.pkg.tar.zst'"
+      line: "PKGEXT='.pkg.tar'"
+
+  - name: makepkg - enable parallel compilation MAKEFLAGS="-j$(nproc)"
+    lineinfile:
+      path: /etc/makepkg.conf
+      regexp: '#MAKEFLAGS="-j2"'
+      line: 'MAKEFLAGS="-j$(nproc)"'
+
+  - name: change number of failed logins that triger 10min lockout
+    lineinfile:
+      path: /etc/security/faillock.conf
+      regexp: '^# deny = 3$'
+      line: 'deny = 10'
+
+  # SSH
+
+  - name: install ssh
+    pacman:
+      name:
+        - openssh
+
+  - name: enable and start ssh service
+    systemd:
+      name: sshd
+      enabled: yes
+      state: started
+
+  # ARCHLINUX-KEYRING WEEKLY UPDATE
+
+  - name: archlinux-keyring - enable weekly update
+    systemd:
+      name: archlinux-keyring-wkd-sync.timer
+      enabled: yes
+      state: started
+
+  # SSD TRIM SCHEDULED
+
+  - name: install util-linux
+    pacman:
+      name:
+        - util-linux
+
+  - name: enable and start weekly ssd disks trim using fstrim timer
+    systemd:
+      name: fstrim.timer
+      enabled: yes
+      state: started
+
+  # TRASH SETUP
+
+  - name: install trash-cli
+    pacman:
+      name:
+        - trash-cli
+
+  - name: create trash-empty.service file
+    copy:
+      dest: '/etc/systemd/system/trash-empty.service'
+      content: |
+        [Unit]
+        Description=Empty trash older than 30 days
+
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/bin/trash-empty 30
+
+  - name: create trash-empty.timer file
+    copy:
+      dest: '/etc/systemd/system/trash-empty.timer'
+      content: |
+        [Unit]
+        Description=Empty trash older than 30 days daily
+
+        [Timer]
+        OnCalendar=daily
+        Persistent=true
+
+        [Install]
+        WantedBy=timers.target
+
+  - name: enable and start trash-empty.timer
+    systemd:
+      name: trash-empty.timer
+      enabled: yes
+      state: started
+
+  # Pacman Cache Cleaner
+
+  - name: install pacman-contrib
+    pacman:
+      name:
+        - pacman-contrib
+
+  - name: enable and start weekly cache cleanup paccache timer
+    systemd:
+      name: paccache.timer
+      enabled: yes
+      state: started
+  
+  # Yay Cache Cleaner
+
+  - name: Install yaycache
+    kewlfft.aur.aur:
+      name:
+        - yaycache
+      state: present
+    become: yes
+    become_user: aur_builder
+  
+  - name: enable and start weekly cache cleanup yaycache timer
+    systemd:
+      name: yaycache.timer
+      enabled: yes
+
+  # REFLECTOR TO REGULARLY UPDATE MIRRORLIST
+
+  - name: install reflector
+    pacman:
+      name:
+        - reflector
+
+  - name: write reflector configuration file
+    copy:
+      dest: '/etc/xdg/reflector/reflector.conf'
+      content: |
+        --save /etc/pacman.d/mirrorlist
+        --protocol https
+        --country US
+        --score 20
+        --sort rate
+
+  - name: enable and start reflector timer
+    systemd:
+      name: reflector.timer
+      enabled: yes
+      state: started
+
+  # - name: do initial run of reflector.service
+  #   systemd:
+  #     name: reflector
+  #     enabled: yes
+  #     state: started
+  #   when: not (ansible_local.initial_reflector.run_once | default(false))
+  #   register: result
+
+  # - name: Set fact if the above task was executed
+  #   set_fact:
+  #     ansible_local:
+  #       initial_reflector:
+  #         run_once: true
+  #   when: result is changed
+
+  # LOGROTATE
+
+  - name: install logrotate
+    pacman:
+      name:
+        - logrotate
+
+  - name: logrotate - enable compression
+    lineinfile:
+      path: /etc/logrotate.conf
+      regexp: '^#compress$'
+      line: 'compress'
+
+  - name: enable and start daily logs rotation, cleanup
+    systemd:
+      name: logrotate.timer
+      enabled: yes
+      state: started
+
+  # AUR user - https://github.com/kewlfft/ansible-aur
+  - name: Create the `aur_builder` user
+    become: yes
+    ansible.builtin.user:
+      name: aur_builder
+      create_home: yes
+      group: wheel
+
+  - name: Allow the `aur_builder` user to run `sudo pacman` without a password
+    become: yes
+    ansible.builtin.lineinfile:
+      path: /etc/sudoers.d/11-install-aur_builder
+      line: 'aur_builder ALL=(ALL) NOPASSWD: /usr/bin/pacman'
+      create: yes
+      mode: 0644
+      validate: 'visudo -cf %s'
+  
+  # Bluetooth
+  - name: enable and start bluetooth service
+    systemd:
+      name: bluetooth
+      enabled: yes
+      state: started
+
+  # Tailscale
+  - name: enable and start tailscale service
+    systemd:
+      name: tailscaled
+      enabled: yes
+      state: started
+  
+  - name: Configure forwarding
+    copy:
+      dest: /etc/sysctl.d/99-tailscale.conf
+      content: |
+        net.ipv4.ip_forward = 1
+        net.ipv6.conf.all.forwarding = 1
+  
+  - name: Enable forwarding
+    command: sysctl -p /etc/sysctl.d/99-tailscale.conf
